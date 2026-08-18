@@ -1,1 +1,293 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover">
 
+  <title>PRCSD Meeting Attendance</title>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    *{
+      box-sizing:border-box;
+    }
+
+    body{
+      margin:0;
+      font-family:Arial,Helvetica,sans-serif;
+      background:#f3f4f6;
+      color:#111827;
+    }
+
+    .header{
+      background:#0f1b5d;
+      color:white;
+      padding:18px;
+      border-bottom:5px solid #ffdd00;
+      text-align:center;
+    }
+
+    .header h1{
+      margin:0;
+      font-size:22px;
+    }
+
+    .header p{
+      margin:5px 0 0;
+      font-size:13px;
+      opacity:.9;
+    }
+
+    .wrap{
+      max-width:600px;
+      margin:18px auto;
+      padding:0 14px;
+    }
+
+    .card{
+      background:white;
+      border:1px solid #d1d5db;
+      border-radius:12px;
+      padding:18px;
+      box-shadow:0 2px 6px rgba(0,0,0,.08);
+    }
+
+    #reader{
+      width:100%;
+      margin-top:15px;
+      overflow:hidden;
+      border-radius:12px;
+    }
+
+    button{
+      width:100%;
+      padding:14px;
+      border:0;
+      border-radius:9px;
+      font-size:17px;
+      font-weight:bold;
+      cursor:pointer;
+      margin-top:10px;
+    }
+
+    #startButton{
+      background:#166534;
+      color:white;
+    }
+
+    #stopButton{
+      background:#991b1b;
+      color:white;
+      display:none;
+    }
+
+    #result{
+      display:none;
+      margin-top:16px;
+      padding:16px;
+      border-radius:10px;
+      background:#dcfce7;
+      border:2px solid #86efac;
+    }
+
+    #resultTitle{
+      font-size:20px;
+      font-weight:bold;
+      color:#166534;
+      margin-bottom:8px;
+    }
+
+    #qrValue{
+      font-size:13px;
+      word-break:break-all;
+      color:#374151;
+    }
+
+    .instructions{
+      text-align:center;
+      color:#6b7280;
+      font-size:14px;
+      line-height:1.5;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="header">
+  <h1>PRCSD Meeting Attendance</h1>
+  <p>Badge QR Scanner Test</p>
+</div>
+
+<div class="wrap">
+
+  <div class="card">
+
+    <div class="instructions">
+      Tap <b>Start Scanner</b>, allow camera access,
+      then point the rear camera at a PRCSD employee badge.
+    </div>
+
+    <button id="startButton">
+      Start Scanner
+    </button>
+
+    <button id="stopButton">
+      Stop Scanner
+    </button>
+
+    <div id="reader"></div>
+
+    <div id="result">
+      <div id="resultTitle">
+        ✅ QR Code Read
+      </div>
+
+      <div id="qrValue"></div>
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+let scanner = null;
+let running = false;
+let lastCode = "";
+let lastTime = 0;
+
+
+document
+  .getElementById("startButton")
+  .addEventListener("click", startScanner);
+
+
+document
+  .getElementById("stopButton")
+  .addEventListener("click", stopScanner);
+
+
+async function startScanner(){
+
+  if(running){
+    return;
+  }
+
+  scanner = new Html5Qrcode("reader");
+
+  try{
+
+    await scanner.start(
+
+      {
+        facingMode: {
+          ideal: "environment"
+        }
+      },
+
+      {
+        fps: 10,
+
+        qrbox: {
+          width: 250,
+          height: 250
+        }
+      },
+
+      qrCodeSuccess,
+
+      function(){
+        // Ignore frames without a QR code.
+      }
+
+    );
+
+    running = true;
+
+    document
+      .getElementById("startButton")
+      .style.display = "none";
+
+    document
+      .getElementById("stopButton")
+      .style.display = "block";
+
+  }
+  catch(err){
+
+    alert(
+      "Camera could not start:\n\n" +
+      (err.message || err)
+    );
+
+  }
+
+}
+
+
+function qrCodeSuccess(decodedText){
+
+  const now = Date.now();
+
+  if(
+    decodedText === lastCode &&
+    now - lastTime < 3000
+  ){
+    return;
+  }
+
+  lastCode = decodedText;
+  lastTime = now;
+
+  document
+    .getElementById("result")
+    .style.display = "block";
+
+  document
+    .getElementById("qrValue")
+    .textContent = decodedText;
+
+  if(navigator.vibrate){
+    navigator.vibrate(150);
+  }
+
+}
+
+
+async function stopScanner(){
+
+  if(!scanner || !running){
+    return;
+  }
+
+  try{
+
+    await scanner.stop();
+    await scanner.clear();
+
+  }
+  catch(err){
+    console.log(err);
+  }
+
+  running = false;
+  scanner = null;
+
+  document
+    .getElementById("startButton")
+    .style.display = "block";
+
+  document
+    .getElementById("stopButton")
+    .style.display = "none";
+
+}
+
+</script>
+
+</body>
+</html>
