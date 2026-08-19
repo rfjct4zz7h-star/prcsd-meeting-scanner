@@ -66,6 +66,14 @@
       <select id="meetingSelect"><option value="">Select a meeting...</option></select>
       <div id="meetingInfo" class="meetingInfo"><div id="meetingName" class="meetingName"></div><div id="meetingMeta" class="meetingMeta"></div></div>
       <div class="countBox"><div id="attendanceCount" class="countNumber">0</div><div class="countLabel">CHECKED IN</div></div>
+      <button id="showMeetingQrButton" class="primary" type="button">Show Meeting Check-In QR</button>
+      <div id="selfQrBox" class="selfQrBox hidden">
+        <h3>Visitor / Employee Self Check-In</h3>
+        <p>Guests and employees without a working badge can scan this QR code with their phone.</p>
+        <div id="meetingQr"></div>
+        <div id="qrStatus" style="font-size:13px;color:#4b5563;"></div>
+        <button id="hideMeetingQrButton" class="secondary" type="button">Hide QR Code</button>
+      </div>
       <button id="logoutButton" class="secondary">Change PIN</button>
     </div>
     <div class="card">
