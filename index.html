@@ -9,6 +9,7 @@
   <style>
     *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111827}.header{background:#0f1b5d;color:#fff;padding:18px;border-bottom:5px solid #ffdd00;text-align:center}.header h1{margin:0;font-size:22px}.header p{margin:5px 0 0;font-size:13px;opacity:.9}.wrap{max-width:600px;margin:18px auto;padding:0 14px 30px}.card{background:#fff;border:1px solid #d1d5db;border-radius:12px;padding:18px;margin-bottom:14px;box-shadow:0 2px 6px rgba(0,0,0,.08)}.hidden{display:none!important}label{display:block;font-weight:bold;margin-bottom:6px}input,select{width:100%;padding:12px;font-size:16px;border:1px solid #9ca3af;border-radius:8px;background:#fff}button{width:100%;padding:14px;border:0;border-radius:9px;font-size:17px;font-weight:bold;cursor:pointer;margin-top:10px}.primary{background:#0f1b5d;color:#fff}.success{background:#166534;color:#fff}.danger{background:#991b1b;color:#fff}.secondary{background:#e5e7eb;color:#111827}.loginTitle{color:#0f1b5d;font-size:21px;font-weight:800;margin-bottom:8px;text-align:center}.loginText{text-align:center;color:#6b7280;font-size:14px;line-height:1.5;margin-bottom:16px}#pinStatus,#status{margin-top:12px;text-align:center;font-size:14px;color:#4b5563}.errorText{color:#991b1b!important;font-weight:700}.meetingInfo{margin-top:12px;padding:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;display:none}.meetingName{font-weight:800;color:#0f1b5d;font-size:18px}.meetingMeta{margin-top:4px;color:#4b5563;font-size:13px}.countBox{text-align:center;margin-top:15px;padding:12px;background:#eff6ff;border-radius:10px;border:1px solid #bfdbfe}.countNumber{font-size:32px;font-weight:900;color:#0f1b5d}.countLabel{font-size:12px;font-weight:bold;color:#4b5563}#reader{width:100%;margin-top:15px;overflow:hidden;border-radius:12px}#result{display:none;margin-top:16px;padding:18px;border-radius:10px;text-align:center}#result.good{display:block;background:#dcfce7;border:2px solid #86efac;color:#14532d}#result.warn{display:block;background:#fef3c7;border:2px solid #fcd34d;color:#78350f}#result.bad{display:block;background:#fee2e2;border:2px solid #fca5a5;color:#7f1d1d}.resultIcon{font-size:38px}.resultName{font-size:23px;font-weight:900;margin-top:5px}.resultMessage{font-size:17px;font-weight:bold;margin-top:5px}.resultMeta{font-size:13px;margin-top:7px;line-height:1.5}.recent{margin-top:18px;border-top:1px solid #d1d5db;padding-top:14px}.recent h3{margin:0 0 8px;font-size:15px}.recentRow{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px}.recentName{font-weight:bold}.recentTime{color:#6b7280;white-space:nowrap}.instructions{text-align:center;color:#6b7280;font-size:14px;line-height:1.5}
   .selfQrBox{margin-top:14px;padding:14px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:10px;text-align:center}.selfQrBox h3{margin:0 0 6px;color:#0f1b5d}.selfQrBox p{margin:0 0 12px;color:#4b5563;font-size:13px;line-height:1.45}#meetingQr{display:flex;justify-content:center;margin:12px auto}#meetingQr img,#meetingQr canvas{background:#fff;padding:10px;border-radius:8px}.publicTitle{font-size:22px;font-weight:900;color:#0f1b5d;text-align:center;margin-bottom:6px}.publicText{text-align:center;color:#6b7280;font-size:14px;line-height:1.45;margin-bottom:16px}.choiceRow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 14px}.choiceBtn{margin-top:0}.choiceBtn.active{outline:3px solid #ffdd00}.field{margin-bottom:13px}.successBox{padding:20px;border-radius:12px;background:#dcfce7;border:2px solid #86efac;color:#14532d;text-align:center}.successBox .big{font-size:40px}.successBox .name{font-size:23px;font-weight:900;margin-top:6px}.successBox .msg{font-size:16px;font-weight:700;margin-top:6px}
+.manualBox{margin-top:14px;padding:14px;border:1px solid #d1d5db;border-radius:10px;background:#fafafa}.manualBox h3{margin:0 0 10px;color:#0f1b5d}.manualGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.manualField{margin-bottom:12px}.manualNote{font-size:12px;color:#6b7280;line-height:1.4;margin-top:6px}.manualResult{margin-top:12px;padding:12px;border-radius:8px;display:none}.manualResult.good{display:block;background:#dcfce7;color:#14532d;border:1px solid #86efac}.manualResult.bad{display:block;background:#fee2e2;color:#7f1d1d;border:1px solid #fca5a5}@media(max-width:600px){.manualGrid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -77,6 +78,60 @@
       </div>
       <button id="logoutButton" class="secondary">Change PIN</button>
     </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 10px;color:#0f1b5d;">Manual Check-In</h3>
+      <div class="instructions" style="margin-bottom:12px;">Use this when someone cannot scan a badge or needs to be added by the meeting coordinator.</div>
+
+      <label for="manualType">Attendee Type</label>
+      <select id="manualType">
+        <option value="">Select type...</option>
+        <option value="employee">Employee / Staff</option>
+        <option value="visitor">Visitor</option>
+      </select>
+
+      <div id="manualEmployeeArea" class="hidden manualBox">
+        <div class="manualField">
+          <label for="manualEmployeeSearch">Search Employee</label>
+          <input id="manualEmployeeSearch" type="text" placeholder="Name or Employee ID">
+        </div>
+
+        <div class="manualField">
+          <label for="manualEmployeeSelect">Matching Employee</label>
+          <select id="manualEmployeeSelect">
+            <option value="">Start typing to search...</option>
+          </select>
+        </div>
+
+        <div class="manualNote">If the employee is not yet in the badge directory, use the manual employee fields below.</div>
+
+        <div class="manualGrid" style="margin-top:12px;">
+          <div class="manualField">
+            <label for="manualEmployeeName">Name</label>
+            <input id="manualEmployeeName" type="text" placeholder="First and last name">
+          </div>
+          <div class="manualField">
+            <label for="manualEmployeeId">Employee ID</label>
+            <input id="manualEmployeeId" type="text" inputmode="numeric" maxlength="4" placeholder="3- or 4-digit ID">
+          </div>
+        </div>
+      </div>
+
+      <div id="manualVisitorArea" class="hidden manualBox">
+        <div class="manualField">
+          <label for="manualVisitorName">Visitor Name</label>
+          <input id="manualVisitorName" type="text" placeholder="First and last name">
+        </div>
+        <div class="manualField">
+          <label for="manualVisitorOrg">Organization / Company (Optional)</label>
+          <input id="manualVisitorOrg" type="text" placeholder="Organization or company">
+        </div>
+      </div>
+
+      <button id="manualCheckInButton" class="primary" type="button">Check In Manually</button>
+      <div id="manualResult" class="manualResult"></div>
+    </div>
+
     <div class="card">
       <div class="instructions">Select a meeting, tap <b>Start Scanner</b>, then hold each badge QR code inside the camera box.</div>
       <button id="startButton" class="success" type="button" onclick="startScanner()">Start Scanner</button>
@@ -90,7 +145,7 @@
 </div>
 <script>
 const API_URL="https://script.google.com/macros/s/AKfycbwj-JnfUXXIVn17Lu15MNz8WZckEDJqeR7rgLfnf_a8CWQXxyPTSUyk-rK_RR6NdQbC/exec";
-let scannerPin="",meetings=[],selectedMeeting=null,scanner=null,running=false,scanBusy=false,lastCode="",lastTime=0,jsonpCounter=0,publicAttendeeType="",summaryTimer=null;
+let scannerPin="",meetings=[],selectedMeeting=null,scanner=null,running=false,scanBusy=false,lastCode="",lastTime=0,jsonpCounter=0,publicAttendeeType="",summaryTimer=null,manualPeople=[];
 window.addEventListener("error",function(e){
   try{
     const box=document.getElementById("jsErrorBanner");
@@ -212,6 +267,140 @@ async function submitPublicCheckIn(){
     btn.disabled=false;
     btn.textContent="Check In";
   }
+}
+
+
+document.getElementById("manualType").addEventListener("change",manualTypeChanged);
+document.getElementById("manualEmployeeSearch").addEventListener("input",renderManualEmployeeMatches);
+document.getElementById("manualEmployeeSelect").addEventListener("change",manualEmployeeSelected);
+document.getElementById("manualCheckInButton").addEventListener("click",submitManualCheckIn);
+
+function manualTypeChanged(){
+  const type=document.getElementById("manualType").value;
+  document.getElementById("manualEmployeeArea").classList.toggle("hidden",type!=="employee");
+  document.getElementById("manualVisitorArea").classList.toggle("hidden",type!=="visitor");
+  clearManualResult();
+
+  if(type==="employee" && !manualPeople.length){
+    loadManualPeople();
+  }
+}
+
+async function loadManualPeople(){
+  try{
+    const result=await callApi({api:"people",pin:scannerPin});
+    if(result&&result.ok){
+      manualPeople=result.people||[];
+      renderManualEmployeeMatches();
+    }
+  }catch(err){
+    console.log(err);
+  }
+}
+
+function renderManualEmployeeMatches(){
+  const q=(document.getElementById("manualEmployeeSearch").value||"").trim().toLowerCase();
+  const select=document.getElementById("manualEmployeeSelect");
+  let matches=manualPeople;
+
+  if(q){
+    matches=manualPeople.filter(p=>
+      String(p.name||"").toLowerCase().includes(q) ||
+      String(p.employeeId||"").toLowerCase().includes(q)
+    );
+  }
+
+  matches=matches.slice(0,50);
+
+  select.innerHTML='<option value="">Select employee...</option>'+
+    matches.map((p,i)=>{
+      const id=p.employeeId?" — "+escapeHtml(p.employeeId):"";
+      return '<option value="'+escapeHtml(p.personKey||String(i))+'">'+escapeHtml(p.name||"")+id+'</option>';
+    }).join("");
+}
+
+function manualEmployeeSelected(){
+  const key=document.getElementById("manualEmployeeSelect").value;
+  const p=manualPeople.find(x=>String(x.personKey||"")===String(key))||null;
+  if(!p)return;
+
+  document.getElementById("manualEmployeeName").value=p.name||"";
+  document.getElementById("manualEmployeeId").value=p.employeeId||"";
+}
+
+function clearManualResult(){
+  const el=document.getElementById("manualResult");
+  el.className="manualResult";
+  el.textContent="";
+}
+
+async function submitManualCheckIn(){
+  clearManualResult();
+
+  if(!selectedMeeting){
+    showManualResult("Select a meeting first.",true);
+    return;
+  }
+
+  const type=document.getElementById("manualType").value;
+  if(!type){
+    showManualResult("Select Employee / Staff or Visitor.",true);
+    return;
+  }
+
+  const btn=document.getElementById("manualCheckInButton");
+  btn.disabled=true;
+  btn.textContent="Checking In…";
+
+  let params={
+    api:"manualcheckin",
+    pin:scannerPin,
+    meetingId:selectedMeeting.meetingId,
+    attendeeType:type
+  };
+
+  if(type==="employee"){
+    params.name=document.getElementById("manualEmployeeName").value.trim();
+    params.employeeId=document.getElementById("manualEmployeeId").value.trim();
+  }else{
+    params.name=document.getElementById("manualVisitorName").value.trim();
+    params.organization=document.getElementById("manualVisitorOrg").value.trim();
+  }
+
+  try{
+    const result=await callApi(params);
+
+    if(!result||!result.ok){
+      throw new Error(result?.error||"Manual check-in could not be completed.");
+    }
+
+    const person=result.person||{};
+    showManualResult(
+      result.duplicate
+        ? (person.name||"Attendee")+" is already checked in."
+        : (person.name||"Attendee")+" checked in successfully.",
+      false
+    );
+
+    await loadSummary();
+
+    if(type==="visitor"&&!result.duplicate){
+      document.getElementById("manualVisitorName").value="";
+      document.getElementById("manualVisitorOrg").value="";
+    }
+
+  }catch(err){
+    showManualResult(err.message||String(err),true);
+  }finally{
+    btn.disabled=false;
+    btn.textContent="Check In Manually";
+  }
+}
+
+function showManualResult(text,bad){
+  const el=document.getElementById("manualResult");
+  el.textContent=text||"";
+  el.className="manualResult "+(bad?"bad":"good");
 }
 
 document.getElementById("loginButton").addEventListener("click",loginScanner);document.getElementById("pinInput").addEventListener("keydown",e=>{if(e.key==="Enter")loginScanner();});document.getElementById("logoutButton").addEventListener("click",logoutScanner);
