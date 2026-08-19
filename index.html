@@ -5,13 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>PRCSD Meeting Attendance</title>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111827}.header{background:#0f1b5d;color:#fff;padding:18px;border-bottom:5px solid #ffdd00;text-align:center}.header h1{margin:0;font-size:22px}.header p{margin:5px 0 0;font-size:13px;opacity:.9}.wrap{max-width:600px;margin:18px auto;padding:0 14px 30px}.card{background:#fff;border:1px solid #d1d5db;border-radius:12px;padding:18px;margin-bottom:14px;box-shadow:0 2px 6px rgba(0,0,0,.08)}.hidden{display:none!important}label{display:block;font-weight:bold;margin-bottom:6px}input,select{width:100%;padding:12px;font-size:16px;border:1px solid #9ca3af;border-radius:8px;background:#fff}button{width:100%;padding:14px;border:0;border-radius:9px;font-size:17px;font-weight:bold;cursor:pointer;margin-top:10px}.primary{background:#0f1b5d;color:#fff}.success{background:#166534;color:#fff}.danger{background:#991b1b;color:#fff}.secondary{background:#e5e7eb;color:#111827}.loginTitle{color:#0f1b5d;font-size:21px;font-weight:800;margin-bottom:8px;text-align:center}.loginText{text-align:center;color:#6b7280;font-size:14px;line-height:1.5;margin-bottom:16px}#pinStatus,#status{margin-top:12px;text-align:center;font-size:14px;color:#4b5563}.errorText{color:#991b1b!important;font-weight:700}.meetingInfo{margin-top:12px;padding:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;display:none}.meetingName{font-weight:800;color:#0f1b5d;font-size:18px}.meetingMeta{margin-top:4px;color:#4b5563;font-size:13px}.countBox{text-align:center;margin-top:15px;padding:12px;background:#eff6ff;border-radius:10px;border:1px solid #bfdbfe}.countNumber{font-size:32px;font-weight:900;color:#0f1b5d}.countLabel{font-size:12px;font-weight:bold;color:#4b5563}#reader{width:100%;margin-top:15px;overflow:hidden;border-radius:12px}#result{display:none;margin-top:16px;padding:18px;border-radius:10px;text-align:center}#result.good{display:block;background:#dcfce7;border:2px solid #86efac;color:#14532d}#result.warn{display:block;background:#fef3c7;border:2px solid #fcd34d;color:#78350f}#result.bad{display:block;background:#fee2e2;border:2px solid #fca5a5;color:#7f1d1d}.resultIcon{font-size:38px}.resultName{font-size:23px;font-weight:900;margin-top:5px}.resultMessage{font-size:17px;font-weight:bold;margin-top:5px}.resultMeta{font-size:13px;margin-top:7px;line-height:1.5}.recent{margin-top:18px;border-top:1px solid #d1d5db;padding-top:14px}.recent h3{margin:0 0 8px;font-size:15px}.recentRow{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px}.recentName{font-weight:bold}.recentTime{color:#6b7280;white-space:nowrap}.instructions{text-align:center;color:#6b7280;font-size:14px;line-height:1.5}
-  </style>
+  .selfQrBox{margin-top:14px;padding:14px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:10px;text-align:center}.selfQrBox h3{margin:0 0 6px;color:#0f1b5d}.selfQrBox p{margin:0 0 12px;color:#4b5563;font-size:13px;line-height:1.45}#meetingQr{display:flex;justify-content:center;margin:12px auto}#meetingQr img,#meetingQr canvas{background:#fff;padding:10px;border-radius:8px}.publicTitle{font-size:22px;font-weight:900;color:#0f1b5d;text-align:center;margin-bottom:6px}.publicText{text-align:center;color:#6b7280;font-size:14px;line-height:1.45;margin-bottom:16px}.choiceRow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 14px}.choiceBtn{margin-top:0}.choiceBtn.active{outline:3px solid #ffdd00}.field{margin-bottom:13px}.successBox{padding:20px;border-radius:12px;background:#dcfce7;border:2px solid #86efac;color:#14532d;text-align:center}.successBox .big{font-size:40px}.successBox .name{font-size:23px;font-weight:900;margin-top:6px}.successBox .msg{font-size:16px;font-weight:700;margin-top:6px}
+</style>
 </head>
 <body>
 <div class="header"><h1>PRCSD Meeting Attendance</h1><p>Employee Badge Check-In</p></div>
 <div class="wrap">
+  <div id="publicCheckInCard" class="card hidden">
+    <div class="publicTitle">Meeting Check-In</div>
+    <div id="publicMeetingText" class="publicText">Loading meeting…</div>
+
+    <div id="publicForm">
+      <label>I am a:</label>
+      <div class="choiceRow">
+        <button id="chooseEmployee" class="secondary choiceBtn" type="button">Employee / Staff</button>
+        <button id="chooseVisitor" class="secondary choiceBtn" type="button">Visitor</button>
+      </div>
+
+      <div class="field">
+        <label for="publicName">First and Last Name</label>
+        <input id="publicName" type="text" autocomplete="name" placeholder="Enter your name">
+      </div>
+
+      <div id="employeeIdField" class="field hidden">
+        <label for="publicEmployeeId">Employee ID</label>
+        <input id="publicEmployeeId" type="text" inputmode="numeric" maxlength="4" placeholder="3- or 4-digit Employee ID">
+      </div>
+
+      <div id="organizationField" class="field hidden">
+        <label for="publicOrganization">Organization / Company (Optional)</label>
+        <input id="publicOrganization" type="text" placeholder="Organization or company">
+      </div>
+
+      <button id="publicSubmit" class="primary" type="button">Check In</button>
+      <div id="publicStatus"></div>
+    </div>
+
+    <div id="publicSuccess" class="successBox hidden">
+      <div class="big">✅</div>
+      <div id="publicSuccessName" class="name"></div>
+      <div class="msg">You are checked in.</div>
+      <div id="publicSuccessMeta" style="margin-top:7px;font-size:13px;"></div>
+    </div>
+  </div>
+
   <div id="loginCard" class="card">
     <div class="loginTitle">Scanner Access</div>
     <div class="loginText">Enter the scanner PIN to load active meetings.</div>
@@ -41,14 +81,172 @@
 </div>
 <script>
 const API_URL="https://script.google.com/macros/s/AKfycbwj-JnfUXXIVn17Lu15MNz8WZckEDJqeR7rgLfnf_a8CWQXxyPTSUyk-rK_RR6NdQbC/exec";
-let scannerPin="",meetings=[],selectedMeeting=null,scanner=null,running=false,scanBusy=false,lastCode="",lastTime=0,jsonpCounter=0;
+let scannerPin="",meetings=[],selectedMeeting=null,scanner=null,running=false,scanBusy=false,lastCode="",lastTime=0,jsonpCounter=0,publicAttendeeType="";
 function callApi(params){return new Promise((resolve,reject)=>{jsonpCounter++;const callbackName="__prcsdCallback"+Date.now()+"_"+jsonpCounter;const script=document.createElement("script");const timeout=setTimeout(()=>{cleanup();reject(new Error("Attendance system did not respond."));},15000);function cleanup(){clearTimeout(timeout);try{delete window[callbackName];}catch(e){}if(script.parentNode)script.parentNode.removeChild(script);}window[callbackName]=result=>{cleanup();resolve(result);};const query=new URLSearchParams({...params,callback:callbackName});script.onerror=()=>{cleanup();reject(new Error("Unable to connect to Attendance system."));};script.src=API_URL+"?"+query.toString();document.body.appendChild(script);});}
+
+const pageParams=new URLSearchParams(window.location.search);
+const publicMeetingId=pageParams.get("meetingId")||"";
+const publicToken=pageParams.get("token")||"";
+const isPublicCheckIn=!!(publicMeetingId&&publicToken);
+
+if(isPublicCheckIn){
+  document.getElementById("loginCard").classList.add("hidden");
+  document.getElementById("appArea").classList.add("hidden");
+  document.getElementById("publicCheckInCard").classList.remove("hidden");
+  initializePublicCheckIn();
+}
+
+document.getElementById("chooseEmployee").addEventListener("click",()=>selectPublicType("employee"));
+document.getElementById("chooseVisitor").addEventListener("click",()=>selectPublicType("visitor"));
+document.getElementById("publicSubmit").addEventListener("click",submitPublicCheckIn);
+
+async function initializePublicCheckIn(){
+  const status=document.getElementById("publicStatus");
+  try{
+    const result=await callApi({api:"selfmeeting",meetingId:publicMeetingId,token:publicToken});
+    if(!result||!result.ok)throw new Error(result?.error||"This meeting check-in link is not available.");
+    const m=result.meeting||{};
+    document.getElementById("publicMeetingText").innerHTML=
+      "<b>"+escapeHtml(m.meetingName||"Meeting")+"</b><br>"+
+      escapeHtml(m.meetingDate||"")+
+      (m.location?" • "+escapeHtml(m.location):"");
+  }catch(err){
+    document.getElementById("publicForm").classList.add("hidden");
+    document.getElementById("publicMeetingText").textContent=err.message||String(err);
+    status.textContent="";
+  }
+}
+
+function selectPublicType(type){
+  publicAttendeeType=type;
+  document.getElementById("chooseEmployee").classList.toggle("active",type==="employee");
+  document.getElementById("chooseVisitor").classList.toggle("active",type==="visitor");
+  document.getElementById("employeeIdField").classList.toggle("hidden",type!=="employee");
+  document.getElementById("organizationField").classList.toggle("hidden",type!=="visitor");
+  document.getElementById("publicStatus").textContent="";
+  document.getElementById("publicStatus").className="";
+}
+
+async function submitPublicCheckIn(){
+  const status=document.getElementById("publicStatus");
+  const btn=document.getElementById("publicSubmit");
+  const name=document.getElementById("publicName").value.trim();
+  const employeeId=document.getElementById("publicEmployeeId").value.trim();
+  const organization=document.getElementById("publicOrganization").value.trim();
+
+  if(!publicAttendeeType){
+    status.textContent="Choose Employee / Staff or Visitor.";
+    status.className="errorText";
+    return;
+  }
+  if(!name){
+    status.textContent="Enter your first and last name.";
+    status.className="errorText";
+    return;
+  }
+  if(publicAttendeeType==="employee"&&!/^\d{3,4}$/.test(employeeId)){
+    status.textContent="Enter your 3- or 4-digit Employee ID.";
+    status.className="errorText";
+    return;
+  }
+
+  btn.disabled=true;
+  btn.textContent="Checking In…";
+  status.textContent="";
+  status.className="";
+
+  try{
+    const result=await callApi({
+      api:"selfcheckin",
+      meetingId:publicMeetingId,
+      token:publicToken,
+      attendeeType:publicAttendeeType,
+      name,
+      employeeId,
+      organization
+    });
+
+    if(!result||!result.ok)throw new Error(result?.error||"Check-in could not be completed.");
+
+    const person=result.person||{};
+    document.getElementById("publicSuccessName").textContent=person.name||name;
+    document.getElementById("publicSuccessMeta").textContent=
+      result.duplicate
+        ? "You were already checked in at "+(result.scanTime||"an earlier time")+"."
+        : (result.scanTime||"");
+    document.getElementById("publicForm").classList.add("hidden");
+    document.getElementById("publicSuccess").classList.remove("hidden");
+    if(navigator.vibrate)navigator.vibrate(150);
+  }catch(err){
+    status.textContent=err.message||String(err);
+    status.className="errorText";
+    btn.disabled=false;
+    btn.textContent="Check In";
+  }
+}
+
 document.getElementById("loginButton").addEventListener("click",loginScanner);document.getElementById("pinInput").addEventListener("keydown",e=>{if(e.key==="Enter")loginScanner();});document.getElementById("logoutButton").addEventListener("click",logoutScanner);
 async function loginScanner(){const pin=document.getElementById("pinInput").value.trim();const status=document.getElementById("pinStatus");if(!pin){status.textContent="Enter the scanner PIN.";status.className="errorText";return;}status.textContent="Checking PIN...";status.className="";try{const result=await callApi({api:"meetings",pin});if(!result||!result.ok)throw new Error(result?.error||"Scanner access was denied.");scannerPin=pin;meetings=result.meetings||[];document.getElementById("loginCard").classList.add("hidden");document.getElementById("appArea").classList.remove("hidden");renderMeetings();}catch(err){status.textContent=err.message||String(err);status.className="errorText";}}
 async function logoutScanner(){if(running)await stopScanner();scannerPin="";selectedMeeting=null;meetings=[];document.getElementById("pinInput").value="";document.getElementById("appArea").classList.add("hidden");document.getElementById("loginCard").classList.remove("hidden");document.getElementById("pinStatus").textContent="";}
 function renderMeetings(){const select=document.getElementById("meetingSelect");select.innerHTML='<option value="">Select a meeting...</option>';meetings.forEach(m=>{const option=document.createElement("option");option.value=m.meetingId;option.textContent=m.meetingName+" — "+m.meetingDate;select.appendChild(option);});if(!meetings.length)select.innerHTML='<option value="">No active meetings found</option>';}
+
+document.getElementById("showMeetingQrButton").addEventListener("click",showMeetingQr);
+document.getElementById("hideMeetingQrButton").addEventListener("click",hideMeetingQr);
+
+async function showMeetingQr(){
+  if(!selectedMeeting){
+    alert("Select a meeting first.");
+    return;
+  }
+
+  const btn=document.getElementById("showMeetingQrButton");
+  const box=document.getElementById("selfQrBox");
+  const qr=document.getElementById("meetingQr");
+  const status=document.getElementById("qrStatus");
+
+  btn.disabled=true;
+  btn.textContent="Creating QR…";
+  qr.innerHTML="";
+  status.textContent="";
+
+  try{
+    const result=await callApi({
+      api:"selflink",
+      pin:scannerPin,
+      meetingId:selectedMeeting.meetingId
+    });
+
+    if(!result||!result.ok)throw new Error(result?.error||"Meeting QR could not be created.");
+
+    const base=window.location.origin+window.location.pathname;
+    const url=base+"?meetingId="+encodeURIComponent(selectedMeeting.meetingId)+"&token="+encodeURIComponent(result.token);
+
+    box.classList.remove("hidden");
+
+    new QRCode(qr,{
+      text:url,
+      width:230,
+      height:230,
+      correctLevel:QRCode.CorrectLevel.M
+    });
+
+    status.textContent="Scan with any phone camera to open self check-in.";
+  }catch(err){
+    alert(err.message||String(err));
+  }finally{
+    btn.disabled=false;
+    btn.textContent="Show Meeting Check-In QR";
+  }
+}
+
+function hideMeetingQr(){
+  document.getElementById("selfQrBox").classList.add("hidden");
+  document.getElementById("meetingQr").innerHTML="";
+  document.getElementById("qrStatus").textContent="";
+}
+
 document.getElementById("meetingSelect").addEventListener("change",meetingChanged);
-async function meetingChanged(){const id=document.getElementById("meetingSelect").value;selectedMeeting=meetings.find(m=>m.meetingId===id)||null;if(!selectedMeeting){document.getElementById("meetingInfo").style.display="none";document.getElementById("attendanceCount").textContent="0";document.getElementById("recentList").textContent="No one has checked in yet.";return;}document.getElementById("meetingName").textContent=selectedMeeting.meetingName;document.getElementById("meetingMeta").textContent=selectedMeeting.meetingDate+(selectedMeeting.location?" • "+selectedMeeting.location:"");document.getElementById("meetingInfo").style.display="block";clearResult();await loadSummary();}
+async function meetingChanged(){hideMeetingQr();const id=document.getElementById("meetingSelect").value;selectedMeeting=meetings.find(m=>m.meetingId===id)||null;if(!selectedMeeting){document.getElementById("meetingInfo").style.display="none";document.getElementById("attendanceCount").textContent="0";document.getElementById("recentList").textContent="No one has checked in yet.";return;}document.getElementById("meetingName").textContent=selectedMeeting.meetingName;document.getElementById("meetingMeta").textContent=selectedMeeting.meetingDate+(selectedMeeting.location?" • "+selectedMeeting.location:"");document.getElementById("meetingInfo").style.display="block";clearResult();await loadSummary();}
 async function loadSummary(){if(!selectedMeeting)return;try{const result=await callApi({api:"summary",pin:scannerPin,meetingId:selectedMeeting.meetingId});if(!result||!result.ok)return;document.getElementById("attendanceCount").textContent=String(result.count||0);renderRecent(result.recent||[]);}catch(err){console.log(err);}}
 document.getElementById("startButton").addEventListener("click",startScanner);document.getElementById("stopButton").addEventListener("click",stopScanner);
 async function startScanner(){if(!selectedMeeting){alert("Select a meeting first.");return;}if(running)return;scanner=new Html5Qrcode("reader");try{await scanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},qrCodeSuccess,()=>{});running=true;document.getElementById("startButton").classList.add("hidden");document.getElementById("stopButton").classList.remove("hidden");setStatus("Scanner ready. Scan an employee badge.");}catch(err){alert("Camera could not start:\n\n"+(err.message||err));}}
