@@ -524,43 +524,124 @@ async function startScanner(){
 
   if(running) return;
 
+  // Pause background attendance refresh while the camera decoder is running.
+  stopSummaryPolling();
+
   setStatus("Starting camera...");
 
   try{
-    scanner=new Html5Qrcode("reader");
+    if(typeof Html5Qrcode==="undefined"){
+      throw new Error("QR scanner library did not load.");
+    }
+
+    scanner=new Html5Qrcode(
+      "reader",
+      {
+        formatsToSupport:[
+          Html5QrcodeSupportedFormats.QR_CODE
+        ],
+        verbose:false
+      }
+    );
 
     await scanner.start(
       {facingMode:"environment"},
       {
-        fps:10,
-        qrbox:{width:250,height:250}
+        fps:15,
+        qrbox:function(viewfinderWidth,viewfinderHeight){
+          const minEdge=Math.min(viewfinderWidth,viewfinderHeight);
+          const box=Math.floor(minEdge*0.78);
+
+          return {
+            width:Math.max(220,Math.min(box,340)),
+            height:Math.max(220,Math.min(box,340))
+          };
+        }
       },
       qrCodeSuccess,
       ()=>{}
     );
 
     running=true;
-    document.getElementById("startButton").classList.add("hidden");
-    document.getElementById("stopButton").classList.remove("hidden");
-    setStatus("Scanner ready. Scan an employee badge.");
+
+    document
+      .getElementById("startButton")
+      .classList.add("hidden");
+
+    document
+      .getElementById("stopButton")
+      .classList.remove("hidden");
+
+    setStatus(
+      "Scanner ready. Hold the badge QR code steady inside the box."
+    );
 
   }catch(err){
     scanner=null;
     running=false;
 
-    const message=(err&&err.message)?err.message:String(err||"Unknown camera error");
+    startSummaryPolling();
 
-    setStatus("Camera could not start: "+message);
+    const message=
+      err&&err.message
+        ? err.message
+        : String(err||"Unknown camera error");
+
+    setStatus(
+      "Camera could not start: "+message
+    );
 
     alert(
       "Camera could not start:\n\n"+
-      message+
-      "\n\nPlease make sure camera access is allowed for this site."
+      message
     );
   }
 }
-async function stopScanner(){if(!scanner||!running)return;try{await scanner.stop();await scanner.clear();}catch(err){console.log(err);}running=false;scanner=null;document.getElementById("startButton").classList.remove("hidden");document.getElementById("stopButton").classList.add("hidden");setStatus("Scanner stopped.");}
-async function qrCodeSuccess(decodedText){const now=Date.now();if(scanBusy)return;if(decodedText===lastCode&&now-lastTime<6000)return;lastCode=decodedText;lastTime=now;scanBusy=true;setStatus("Checking badge...");try{const result=await callApi({api:"scan",pin:scannerPin,meetingId:selectedMeeting.meetingId,qr:decodedText});handleScanResult(result);}catch(err){showBad(err.message||String(err));}finally{scanBusy=false;}}
+
+
+async function stopScanner(){
+  if(scanner&&running){
+    try{
+      await scanner.stop();
+      await scanner.clear();
+    }catch(err){
+      console.log(err);
+    }
+  }
+
+  running=false;
+  scanner=null;
+
+  document
+    .getElementById("startButton")
+    .classList.remove("hidden");
+
+  document
+    .getElementById("stopButton")
+    .classList.add("hidden");
+
+  setStatus("Scanner stopped.");
+
+  // Resume live attendance updates after scanning stops.
+  startSummaryPolling();
+}
+
+
+async function qrCodeSuccess(decodedText){
+  const now=Date.now();
+  const text=String(decodedText||"").trim();
+
+  if(!text||scanBusy) return;
+
+  if(text===lastCode&&now-lastTime<2500) return;
+
+  lastCode=text;
+  lastTime=now;
+  scanBusy=true;
+
+  setStatus("QR detected. Checking badge...");
+
+try{const result=await callApi({api:"scan",pin:scannerPin,meetingId:selectedMeeting.meetingId,qr:text});handleScanResult(result);}catch(err){showBad(err.message||String(err));}finally{scanBusy=false;}}
 function handleScanResult(result){if(!result||!result.ok){showBad(result?.error||"Badge was not accepted.");return;}const person=result.person||{};if(result.duplicate){showResult("warn","⚠️",person.name||"Badge Holder","Already Checked In",[person.department,person.badgeNumber?"Badge #"+person.badgeNumber:"",result.scanTime?"Original check-in: "+result.scanTime:""].filter(Boolean).join(" • "));document.getElementById("attendanceCount").textContent=String(result.count||0);vibrate([120,80,120]);setStatus("Already checked in. Scan the next badge.");return;}showResult("good","✅",person.name||"Badge Holder","CHECKED IN",[person.department,person.badgeNumber?"Badge #"+person.badgeNumber:"",result.scanTime||""].filter(Boolean).join(" • "));document.getElementById("attendanceCount").textContent=String(result.count||0);vibrate(150);setStatus("Check-in recorded. Scan the next badge.");loadSummary();}
 function showBad(message){showResult("bad","❌","","NOT CHECKED IN",message);vibrate([200,100,200]);setStatus("Badge not accepted.");}
 function showResult(type,icon,name,message,meta){const box=document.getElementById("result");box.className=type;box.style.display="block";document.getElementById("resultIcon").textContent=icon||"";document.getElementById("resultName").textContent=name||"";document.getElementById("resultMessage").textContent=message||"";document.getElementById("resultMeta").textContent=meta||"";}
