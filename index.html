@@ -257,7 +257,101 @@ document.getElementById("meetingSelect").addEventListener("change",meetingChange
 async function meetingChanged(){hideMeetingQr();const id=document.getElementById("meetingSelect").value;selectedMeeting=meetings.find(m=>m.meetingId===id)||null;if(!selectedMeeting){document.getElementById("meetingInfo").style.display="none";document.getElementById("attendanceCount").textContent="0";document.getElementById("recentList").textContent="No one has checked in yet.";return;}document.getElementById("meetingName").textContent=selectedMeeting.meetingName;document.getElementById("meetingMeta").textContent=selectedMeeting.meetingDate+(selectedMeeting.location?" • "+selectedMeeting.location:"");document.getElementById("meetingInfo").style.display="block";clearResult();await loadSummary();}
 async function loadSummary(){if(!selectedMeeting)return;try{const result=await callApi({api:"summary",pin:scannerPin,meetingId:selectedMeeting.meetingId});if(!result||!result.ok)return;document.getElementById("attendanceCount").textContent=String(result.count||0);renderRecent(result.recent||[]);}catch(err){console.log(err);}}
 document.getElementById("startButton").addEventListener("click",startScanner);document.getElementById("stopButton").addEventListener("click",stopScanner);
-async function startScanner(){if(!selectedMeeting){alert("Select a meeting first.");return;}if(running)return;scanner=new Html5Qrcode("reader");try{await scanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},qrCodeSuccess,()=>{});running=true;document.getElementById("startButton").classList.add("hidden");document.getElementById("stopButton").classList.remove("hidden");setStatus("Scanner ready. Scan an employee badge.");}catch(err){alert("Camera could not start:\n\n"+(err.message||err));}}
+async function startScanner(){
+  if(!selectedMeeting){
+    alert("Select a meeting first.");
+    return;
+  }
+
+  if(running) return;
+
+  const startButton=document.getElementById("startButton");
+  const stopButton=document.getElementById("stopButton");
+
+  startButton.disabled=true;
+  startButton.textContent="Starting Camera…";
+  setStatus("Requesting camera access…");
+
+  try{
+    if(typeof Html5Qrcode==="undefined"){
+      throw new Error("QR scanner library did not load. Refresh this page and try again.");
+    }
+
+    if(scanner){
+      try{
+        await scanner.clear();
+      }catch(e){}
+      scanner=null;
+    }
+
+    scanner=new Html5Qrcode("reader");
+
+    let cameraConfig={facingMode:"environment"};
+
+    try{
+      const cameras=await Html5Qrcode.getCameras();
+
+      if(cameras&&cameras.length){
+        const rearCamera=
+          cameras.find(c=>
+            /back|rear|environment/i.test(c.label||"")
+          ) ||
+          cameras[cameras.length-1];
+
+        if(rearCamera&&rearCamera.id){
+          cameraConfig=rearCamera.id;
+        }
+      }
+    }catch(cameraListError){
+      console.log("Camera list unavailable; using rear-camera preference.",cameraListError);
+    }
+
+    await scanner.start(
+      cameraConfig,
+      {
+        fps:10,
+        qrbox:{width:250,height:250},
+        aspectRatio:1.0
+      },
+      qrCodeSuccess,
+      ()=>{}
+    );
+
+    running=true;
+    startButton.classList.add("hidden");
+    stopButton.classList.remove("hidden");
+    setStatus("Scanner ready. Scan an employee badge.");
+
+  }catch(err){
+    console.error("Camera start error:",err);
+
+    running=false;
+
+    if(scanner){
+      try{
+        await scanner.clear();
+      }catch(e){}
+    }
+
+    scanner=null;
+
+    const message=
+      err&&err.message
+        ? err.message
+        : String(err||"Unknown camera error");
+
+    setStatus("Camera could not start: "+message);
+    alert(
+      "Camera could not start.\n\n"+
+      message+
+      "\n\nMake sure camera permission is allowed for this website."
+    );
+
+  }finally{
+    startButton.disabled=false;
+    startButton.textContent="Start Scanner";
+  }
+}
 async function stopScanner(){if(!scanner||!running)return;try{await scanner.stop();await scanner.clear();}catch(err){console.log(err);}running=false;scanner=null;document.getElementById("startButton").classList.remove("hidden");document.getElementById("stopButton").classList.add("hidden");setStatus("Scanner stopped.");}
 async function qrCodeSuccess(decodedText){const now=Date.now();if(scanBusy)return;if(decodedText===lastCode&&now-lastTime<6000)return;lastCode=decodedText;lastTime=now;scanBusy=true;setStatus("Checking badge...");try{const result=await callApi({api:"scan",pin:scannerPin,meetingId:selectedMeeting.meetingId,qr:decodedText});handleScanResult(result);}catch(err){showBad(err.message||String(err));}finally{scanBusy=false;}}
 function handleScanResult(result){if(!result||!result.ok){showBad(result?.error||"Badge was not accepted.");return;}const person=result.person||{};if(result.duplicate){showResult("warn","⚠️",person.name||"Badge Holder","Already Checked In",[person.department,person.badgeNumber?"Badge #"+person.badgeNumber:"",result.scanTime?"Original check-in: "+result.scanTime:""].filter(Boolean).join(" • "));document.getElementById("attendanceCount").textContent=String(result.count||0);vibrate([120,80,120]);setStatus("Already checked in. Scan the next badge.");return;}showResult("good","✅",person.name||"Badge Holder","CHECKED IN",[person.department,person.badgeNumber?"Badge #"+person.badgeNumber:"",result.scanTime||""].filter(Boolean).join(" • "));document.getElementById("attendanceCount").textContent=String(result.count||0);vibrate(150);setStatus("Check-in recorded. Scan the next badge.");loadSummary();}
