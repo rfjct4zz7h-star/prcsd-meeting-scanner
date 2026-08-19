@@ -90,7 +90,7 @@
 </div>
 <script>
 const API_URL="https://script.google.com/macros/s/AKfycbwj-JnfUXXIVn17Lu15MNz8WZckEDJqeR7rgLfnf_a8CWQXxyPTSUyk-rK_RR6NdQbC/exec";
-let scannerPin="",meetings=[],selectedMeeting=null,scanner=null,running=false,scanBusy=false,lastCode="",lastTime=0,jsonpCounter=0,publicAttendeeType="";
+let scannerPin="",meetings=[],selectedMeeting=null,scanner=null,running=false,scanBusy=false,lastCode="",lastTime=0,jsonpCounter=0,publicAttendeeType="",summaryTimer=null;
 window.addEventListener("error",function(e){
   try{
     const box=document.getElementById("jsErrorBanner");
@@ -216,7 +216,7 @@ async function submitPublicCheckIn(){
 
 document.getElementById("loginButton").addEventListener("click",loginScanner);document.getElementById("pinInput").addEventListener("keydown",e=>{if(e.key==="Enter")loginScanner();});document.getElementById("logoutButton").addEventListener("click",logoutScanner);
 async function loginScanner(){const pin=document.getElementById("pinInput").value.trim();const status=document.getElementById("pinStatus");if(!pin){status.textContent="Enter the scanner PIN.";status.className="errorText";return;}status.textContent="Checking PIN...";status.className="";try{const result=await callApi({api:"meetings",pin});if(!result||!result.ok)throw new Error(result?.error||"Scanner access was denied.");scannerPin=pin;meetings=result.meetings||[];document.getElementById("loginCard").classList.add("hidden");document.getElementById("appArea").classList.remove("hidden");renderMeetings();}catch(err){status.textContent=err.message||String(err);status.className="errorText";}}
-async function logoutScanner(){if(running)await stopScanner();scannerPin="";selectedMeeting=null;meetings=[];document.getElementById("pinInput").value="";document.getElementById("appArea").classList.add("hidden");document.getElementById("loginCard").classList.remove("hidden");document.getElementById("pinStatus").textContent="";}
+async function logoutScanner(){stopSummaryPolling();if(running)await stopScanner();scannerPin="";selectedMeeting=null;meetings=[];document.getElementById("pinInput").value="";document.getElementById("appArea").classList.add("hidden");document.getElementById("loginCard").classList.remove("hidden");document.getElementById("pinStatus").textContent="";}
 function renderMeetings(){const select=document.getElementById("meetingSelect");select.innerHTML='<option value="">Select a meeting...</option>';meetings.forEach(m=>{const option=document.createElement("option");option.value=m.meetingId;option.textContent=m.meetingName+" — "+m.meetingDate;select.appendChild(option);});if(!meetings.length)select.innerHTML='<option value="">No active meetings found</option>';}
 
 if(document.getElementById("showMeetingQrButton")) document.getElementById("showMeetingQrButton").addEventListener("click",showMeetingQr);
@@ -279,7 +279,52 @@ function hideMeetingQr(){
 }
 
 document.getElementById("meetingSelect").addEventListener("change",meetingChanged);
-async function meetingChanged(){hideMeetingQr();const id=document.getElementById("meetingSelect").value;selectedMeeting=meetings.find(m=>m.meetingId===id)||null;if(!selectedMeeting){document.getElementById("meetingInfo").style.display="none";document.getElementById("attendanceCount").textContent="0";document.getElementById("recentList").textContent="No one has checked in yet.";return;}document.getElementById("meetingName").textContent=selectedMeeting.meetingName;document.getElementById("meetingMeta").textContent=selectedMeeting.meetingDate+(selectedMeeting.location?" • "+selectedMeeting.location:"");document.getElementById("meetingInfo").style.display="block";clearResult();await loadSummary();}
+
+function stopSummaryPolling(){
+  if(summaryTimer){
+    clearInterval(summaryTimer);
+    summaryTimer=null;
+  }
+}
+
+function startSummaryPolling(){
+  stopSummaryPolling();
+
+  if(!selectedMeeting){
+    return;
+  }
+
+  summaryTimer=setInterval(()=>{
+    if(selectedMeeting){
+      loadSummary();
+    }
+  },5000);
+}
+
+async function meetingChanged(){
+  hideMeetingQr();
+  stopSummaryPolling();
+
+  const id=document.getElementById("meetingSelect").value;
+  selectedMeeting=meetings.find(m=>m.meetingId===id)||null;
+
+  if(!selectedMeeting){
+    document.getElementById("meetingInfo").style.display="none";
+    document.getElementById("attendanceCount").textContent="0";
+    document.getElementById("recentList").textContent="No one has checked in yet.";
+    return;
+  }
+
+  document.getElementById("meetingName").textContent=selectedMeeting.meetingName;
+  document.getElementById("meetingMeta").textContent=
+    selectedMeeting.meetingDate+
+    (selectedMeeting.location?" • "+selectedMeeting.location:"");
+
+  document.getElementById("meetingInfo").style.display="block";
+  clearResult();
+  await loadSummary();
+  startSummaryPolling();
+}
 async function loadSummary(){if(!selectedMeeting)return;try{const result=await callApi({api:"summary",pin:scannerPin,meetingId:selectedMeeting.meetingId});if(!result||!result.ok)return;document.getElementById("attendanceCount").textContent=String(result.count||0);renderRecent(result.recent||[]);}catch(err){console.log(err);}}
 
 async function startScanner(){
