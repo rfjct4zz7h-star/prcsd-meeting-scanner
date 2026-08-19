@@ -14,6 +14,7 @@
 <body>
 <div class="header"><h1>PRCSD Meeting Attendance</h1><p>Employee Badge Check-In</p></div>
 <div class="wrap">
+  <div id="jsErrorBanner" class="card hidden" style="border:2px solid #dc2626;background:#fee2e2;color:#7f1d1d;font-weight:700;"></div>
   <div id="publicCheckInCard" class="card hidden">
     <div class="publicTitle">Meeting Check-In</div>
     <div id="publicMeetingText" class="publicText">Loading meeting…</div>
@@ -78,8 +79,8 @@
     </div>
     <div class="card">
       <div class="instructions">Select a meeting, tap <b>Start Scanner</b>, then hold each badge QR code inside the camera box.</div>
-      <button id="startButton" class="success">Start Scanner</button>
-      <button id="stopButton" class="danger hidden">Stop Scanner</button>
+      <button id="startButton" class="success" type="button" onclick="startScanner()">Start Scanner</button>
+      <button id="stopButton" class="danger hidden" type="button" onclick="stopScanner()">Stop Scanner</button>
       <div id="reader"></div>
       <div id="status"></div>
       <div id="result"><div id="resultIcon" class="resultIcon"></div><div id="resultName" class="resultName"></div><div id="resultMessage" class="resultMessage"></div><div id="resultMeta" class="resultMeta"></div></div>
@@ -90,6 +91,26 @@
 <script>
 const API_URL="https://script.google.com/macros/s/AKfycbwj-JnfUXXIVn17Lu15MNz8WZckEDJqeR7rgLfnf_a8CWQXxyPTSUyk-rK_RR6NdQbC/exec";
 let scannerPin="",meetings=[],selectedMeeting=null,scanner=null,running=false,scanBusy=false,lastCode="",lastTime=0,jsonpCounter=0,publicAttendeeType="";
+window.addEventListener("error",function(e){
+  try{
+    const box=document.getElementById("jsErrorBanner");
+    if(box){
+      box.textContent="Page error: "+(e.message||"Unknown JavaScript error");
+      box.classList.remove("hidden");
+    }
+  }catch(_){}
+});
+window.addEventListener("unhandledrejection",function(e){
+  try{
+    const box=document.getElementById("jsErrorBanner");
+    if(box){
+      const reason=e.reason&&e.reason.message?e.reason.message:String(e.reason||"Unknown error");
+      box.textContent="Page error: "+reason;
+      box.classList.remove("hidden");
+    }
+  }catch(_){}
+});
+
 function callApi(params){return new Promise((resolve,reject)=>{jsonpCounter++;const callbackName="__prcsdCallback"+Date.now()+"_"+jsonpCounter;const script=document.createElement("script");const timeout=setTimeout(()=>{cleanup();reject(new Error("Attendance system did not respond."));},15000);function cleanup(){clearTimeout(timeout);try{delete window[callbackName];}catch(e){}if(script.parentNode)script.parentNode.removeChild(script);}window[callbackName]=result=>{cleanup();resolve(result);};const query=new URLSearchParams({...params,callback:callbackName});script.onerror=()=>{cleanup();reject(new Error("Unable to connect to Attendance system."));};script.src=API_URL+"?"+query.toString();document.body.appendChild(script);});}
 
 const pageParams=new URLSearchParams(window.location.search);
@@ -104,9 +125,9 @@ if(isPublicCheckIn){
   initializePublicCheckIn();
 }
 
-document.getElementById("chooseEmployee").addEventListener("click",()=>selectPublicType("employee"));
-document.getElementById("chooseVisitor").addEventListener("click",()=>selectPublicType("visitor"));
-document.getElementById("publicSubmit").addEventListener("click",submitPublicCheckIn);
+if(document.getElementById("chooseEmployee")) document.getElementById("chooseEmployee").addEventListener("click",()=>selectPublicType("employee"));
+if(document.getElementById("chooseVisitor")) document.getElementById("chooseVisitor").addEventListener("click",()=>selectPublicType("visitor"));
+if(document.getElementById("publicSubmit")) document.getElementById("publicSubmit").addEventListener("click",submitPublicCheckIn);
 
 async function initializePublicCheckIn(){
   const status=document.getElementById("publicStatus");
@@ -198,8 +219,8 @@ async function loginScanner(){const pin=document.getElementById("pinInput").valu
 async function logoutScanner(){if(running)await stopScanner();scannerPin="";selectedMeeting=null;meetings=[];document.getElementById("pinInput").value="";document.getElementById("appArea").classList.add("hidden");document.getElementById("loginCard").classList.remove("hidden");document.getElementById("pinStatus").textContent="";}
 function renderMeetings(){const select=document.getElementById("meetingSelect");select.innerHTML='<option value="">Select a meeting...</option>';meetings.forEach(m=>{const option=document.createElement("option");option.value=m.meetingId;option.textContent=m.meetingName+" — "+m.meetingDate;select.appendChild(option);});if(!meetings.length)select.innerHTML='<option value="">No active meetings found</option>';}
 
-document.getElementById("showMeetingQrButton").addEventListener("click",showMeetingQr);
-document.getElementById("hideMeetingQrButton").addEventListener("click",hideMeetingQr);
+if(document.getElementById("showMeetingQrButton")) document.getElementById("showMeetingQrButton").addEventListener("click",showMeetingQr);
+if(document.getElementById("hideMeetingQrButton")) document.getElementById("hideMeetingQrButton").addEventListener("click",hideMeetingQr);
 
 async function showMeetingQr(){
   if(!selectedMeeting){
@@ -231,6 +252,10 @@ async function showMeetingQr(){
 
     box.classList.remove("hidden");
 
+    if(typeof QRCode==="undefined"){
+      throw new Error("Meeting QR library did not load. Badge scanning will still work.");
+    }
+
     new QRCode(qr,{
       text:url,
       width:230,
@@ -256,7 +281,7 @@ function hideMeetingQr(){
 document.getElementById("meetingSelect").addEventListener("change",meetingChanged);
 async function meetingChanged(){hideMeetingQr();const id=document.getElementById("meetingSelect").value;selectedMeeting=meetings.find(m=>m.meetingId===id)||null;if(!selectedMeeting){document.getElementById("meetingInfo").style.display="none";document.getElementById("attendanceCount").textContent="0";document.getElementById("recentList").textContent="No one has checked in yet.";return;}document.getElementById("meetingName").textContent=selectedMeeting.meetingName;document.getElementById("meetingMeta").textContent=selectedMeeting.meetingDate+(selectedMeeting.location?" • "+selectedMeeting.location:"");document.getElementById("meetingInfo").style.display="block";clearResult();await loadSummary();}
 async function loadSummary(){if(!selectedMeeting)return;try{const result=await callApi({api:"summary",pin:scannerPin,meetingId:selectedMeeting.meetingId});if(!result||!result.ok)return;document.getElementById("attendanceCount").textContent=String(result.count||0);renderRecent(result.recent||[]);}catch(err){console.log(err);}}
-document.getElementById("startButton").addEventListener("click",startScanner);document.getElementById("stopButton").addEventListener("click",stopScanner);
+
 async function startScanner(){
   if(!selectedMeeting){
     alert("Select a meeting first.");
@@ -265,91 +290,39 @@ async function startScanner(){
 
   if(running) return;
 
-  const startButton=document.getElementById("startButton");
-  const stopButton=document.getElementById("stopButton");
-
-  startButton.disabled=true;
-  startButton.textContent="Starting Camera…";
-  setStatus("Requesting camera access…");
+  setStatus("Starting camera...");
 
   try{
-    if(typeof Html5Qrcode==="undefined"){
-      throw new Error("QR scanner library did not load. Refresh this page and try again.");
-    }
-
-    if(scanner){
-      try{
-        await scanner.clear();
-      }catch(e){}
-      scanner=null;
-    }
-
     scanner=new Html5Qrcode("reader");
 
-    let cameraConfig={facingMode:"environment"};
-
-    try{
-      const cameras=await Html5Qrcode.getCameras();
-
-      if(cameras&&cameras.length){
-        const rearCamera=
-          cameras.find(c=>
-            /back|rear|environment/i.test(c.label||"")
-          ) ||
-          cameras[cameras.length-1];
-
-        if(rearCamera&&rearCamera.id){
-          cameraConfig=rearCamera.id;
-        }
-      }
-    }catch(cameraListError){
-      console.log("Camera list unavailable; using rear-camera preference.",cameraListError);
-    }
-
     await scanner.start(
-      cameraConfig,
+      {facingMode:"environment"},
       {
         fps:10,
-        qrbox:{width:250,height:250},
-        aspectRatio:1.0
+        qrbox:{width:250,height:250}
       },
       qrCodeSuccess,
       ()=>{}
     );
 
     running=true;
-    startButton.classList.add("hidden");
-    stopButton.classList.remove("hidden");
+    document.getElementById("startButton").classList.add("hidden");
+    document.getElementById("stopButton").classList.remove("hidden");
     setStatus("Scanner ready. Scan an employee badge.");
 
   }catch(err){
-    console.error("Camera start error:",err);
-
+    scanner=null;
     running=false;
 
-    if(scanner){
-      try{
-        await scanner.clear();
-      }catch(e){}
-    }
-
-    scanner=null;
-
-    const message=
-      err&&err.message
-        ? err.message
-        : String(err||"Unknown camera error");
+    const message=(err&&err.message)?err.message:String(err||"Unknown camera error");
 
     setStatus("Camera could not start: "+message);
-    alert(
-      "Camera could not start.\n\n"+
-      message+
-      "\n\nMake sure camera permission is allowed for this website."
-    );
 
-  }finally{
-    startButton.disabled=false;
-    startButton.textContent="Start Scanner";
+    alert(
+      "Camera could not start:\n\n"+
+      message+
+      "\n\nPlease make sure camera access is allowed for this site."
+    );
   }
 }
 async function stopScanner(){if(!scanner||!running)return;try{await scanner.stop();await scanner.clear();}catch(err){console.log(err);}running=false;scanner=null;document.getElementById("startButton").classList.remove("hidden");document.getElementById("stopButton").classList.add("hidden");setStatus("Scanner stopped.");}
