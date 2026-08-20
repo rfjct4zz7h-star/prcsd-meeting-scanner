@@ -548,21 +548,16 @@ async function startScanner(){
     );
 
     await scanner.start(
-      {facingMode:"environment"},
       {
-        // Decode more often and use almost the entire camera image.
-        // The older 250px/78% scan box was the main reason a small
-        // printed QR had to be held in exactly the right spot.
-        fps:20,
-        qrbox:function(viewfinderWidth,viewfinderHeight){
-          const minEdge=Math.min(viewfinderWidth,viewfinderHeight);
-          const box=Math.floor(minEdge*0.94);
-
-          return {
-            width:Math.max(250,box),
-            height:Math.max(250,box)
-          };
-        },
+        facingMode:"environment",
+        width:{ideal:1920},
+        height:{ideal:1080}
+      },
+      {
+        // Faster decode loop. No qrbox means the decoder can use the
+        // entire camera image instead of waiting for the code to sit
+        // inside a center square.
+        fps:30,
         disableFlip:true
       },
       qrCodeSuccess,
@@ -580,15 +575,32 @@ async function startScanner(){
 
       if(track && track.getCapabilities && track.applyConstraints){
         const caps=track.getCapabilities();
+        const advanced={};
 
         if(
           caps.focusMode &&
           Array.isArray(caps.focusMode) &&
           caps.focusMode.includes("continuous")
         ){
-          await track.applyConstraints({
-            advanced:[{focusMode:"continuous"}]
-          });
+          advanced.focusMode="continuous";
+        }
+
+        // A small amount of camera zoom makes the tiny printed QR occupy
+        // more pixels while still leaving plenty of room to aim.
+        if(
+          caps.zoom &&
+          typeof caps.zoom.min === "number" &&
+          typeof caps.zoom.max === "number"
+        ){
+          const wanted=Math.min(
+            caps.zoom.max,
+            Math.max(caps.zoom.min, 1.35)
+          );
+          advanced.zoom=wanted;
+        }
+
+        if(Object.keys(advanced).length){
+          await track.applyConstraints({advanced:[advanced]});
         }
       }
     }catch(focusErr){
@@ -606,7 +618,7 @@ async function startScanner(){
       .classList.remove("hidden");
 
     setStatus(
-      "Scanner ready. Point the camera at the badge QR code."
+      "Scanner ready. Point the camera at the badge — no need to center it exactly."
     );
 
   }catch(err){
