@@ -540,6 +540,9 @@ async function startScanner(){
         formatsToSupport:[
           Html5QrcodeSupportedFormats.QR_CODE
         ],
+        experimentalFeatures:{
+          useBarCodeDetectorIfSupported:true
+        },
         verbose:false
       }
     );
@@ -547,20 +550,50 @@ async function startScanner(){
     await scanner.start(
       {facingMode:"environment"},
       {
-        fps:15,
+        // Decode more often and use almost the entire camera image.
+        // The older 250px/78% scan box was the main reason a small
+        // printed QR had to be held in exactly the right spot.
+        fps:20,
         qrbox:function(viewfinderWidth,viewfinderHeight){
           const minEdge=Math.min(viewfinderWidth,viewfinderHeight);
-          const box=Math.floor(minEdge*0.78);
+          const box=Math.floor(minEdge*0.94);
 
           return {
-            width:Math.max(220,Math.min(box,340)),
-            height:Math.max(220,Math.min(box,340))
+            width:Math.max(250,box),
+            height:Math.max(250,box)
           };
-        }
+        },
+        disableFlip:true
       },
       qrCodeSuccess,
       ()=>{}
     );
+
+    // Ask the rear camera to stay in continuous focus when the
+    // browser/device supports it. Unsupported devices simply ignore it.
+    try{
+      const video=document.querySelector("#reader video");
+      const stream=video && video.srcObject;
+      const track=stream && stream.getVideoTracks
+        ? stream.getVideoTracks()[0]
+        : null;
+
+      if(track && track.getCapabilities && track.applyConstraints){
+        const caps=track.getCapabilities();
+
+        if(
+          caps.focusMode &&
+          Array.isArray(caps.focusMode) &&
+          caps.focusMode.includes("continuous")
+        ){
+          await track.applyConstraints({
+            advanced:[{focusMode:"continuous"}]
+          });
+        }
+      }
+    }catch(focusErr){
+      console.log("Continuous focus not available:",focusErr);
+    }
 
     running=true;
 
@@ -573,7 +606,7 @@ async function startScanner(){
       .classList.remove("hidden");
 
     setStatus(
-      "Scanner ready. Hold the badge QR code steady inside the box."
+      "Scanner ready. Point the camera at the badge QR code."
     );
 
   }catch(err){
